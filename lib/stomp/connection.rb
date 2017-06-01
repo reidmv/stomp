@@ -116,7 +116,7 @@ module Stomp
       @hbs = @hbr = false       # Sending/Receiving heartbeats. Assume no for now.
       @jruby = false            # Assumed at first
       # Initialize some variables
-      @closed, @socket, @hhas10, @rt, @st = true, nil, false, nil, nil
+      @closed, @socket, @hhas10, @rt, @st, @getst = true, nil, false, nil, nil, nil
       if defined?(RUBY_ENGINE) && RUBY_ENGINE =~ /jruby/
         @jruby = true
       end
@@ -156,6 +156,7 @@ module Stomp
       @transmit_semaphore = Mutex.new
       @read_semaphore = Mutex.new
       @socket_semaphore = Mutex.new
+      @gets_semaphore = Mutex.new
 
       @subscriptions = {}
       @failure = nil

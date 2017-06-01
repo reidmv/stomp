@@ -11,6 +11,18 @@ module Stomp
 
     private
 
+    def _gets_in_thread(read_socket)
+      # The gets thread may be killed by the heartbeat thread. Ensure that
+      # if so killed, a new gets thread cannot start until after the
+      # heartbeat thread finishes its work. This is PURELY to avoid a
+      # segfault bug involving OpenSSL::Buffer.
+      @gets_semaphore.synchronize { true }
+      @getst = Thread.new { read_socket.gets }
+      result = @getst.value
+      @getst = nil
+      result
+    end
+
     # Really read from the wire.
     def _receive(read_socket, connread = false)
       @read_semaphore.synchronize do
@@ -40,7 +52,7 @@ module Stomp
           message_header = ''
           begin
             message_header += line
-            line = read_socket.gets
+            line = _gets_in_thread(read_socket)
             # p [ "wiredatain_02", line ]
             raise Stomp::Error::StompServerError if line.nil?
             line = _normalize_line_end(line) if @protocol >= Stomp::SPL_12
@@ -379,16 +391,16 @@ module Stomp
           if @jruby
             # Handle JRuby specific behavior.
             while true
-              line = read_socket.gets # Data from wire
+              line = _gets_in_thread(read_socket) # Data from wire
               break unless line == "\n"
               line = ''
             end
           else
-            line = read_socket.gets # The old way
+            line = _gets_in_thread(read_socket) # The old way
           end
         else # We are >= 1.1 *AND* receiving heartbeats.
           while true
-            line = read_socket.gets # Data from wire
+            line = _gets_in_thread(read_socket) # Data from wire
             break unless line == "\n"
             line = ''
             @lr = Time.now.to_f

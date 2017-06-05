@@ -233,7 +233,7 @@ module Stomp
             if (@max_hbrlck_fails > 0 && lock_fail_count >= @max_hbrlck_fails)
               # This is an attempt at a connection retry.
               @gets_semaphore.synchronize do
-                @getst.kill if @getst rescue nil # kill the socket reading thread if exists
+                @getst.raise(Errno::EBADF.new) if @getst rescue nil # kill the socket reading thread if exists
                 @socket.close rescue nil # Attempt a forced close
               end
               @st.kill if @st   # Kill the sender thread if one exists
